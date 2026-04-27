@@ -3,6 +3,7 @@ package com.sahabakery.controller;
 import com.sahabakery.entity.SiteSettings;
 import com.sahabakery.repository.SiteSettingsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +20,6 @@ public class SiteSettingsController {
             return siteSettingsRepository.findById(1L)
                     .map(ResponseEntity::ok)
                     .orElseGet(() -> {
-                        // Create default settings if not exists
                         SiteSettings settings = new SiteSettings();
                         settings.setId(1L);
                         settings.setPhone("+91 95631 71459");
@@ -27,8 +27,12 @@ public class SiteSettingsController {
                         settings.setAddress("Gorabazar, Berhampore, West Bengal 742101");
                         try {
                             return ResponseEntity.ok(siteSettingsRepository.save(settings));
+                        } catch (DataIntegrityViolationException e) {
+                            // Another request already inserted — just return existing
+                            return siteSettingsRepository.findById(1L)
+                                    .map(ResponseEntity::ok)
+                                    .orElse(ResponseEntity.internalServerError().build());
                         } catch (Exception e) {
-                            // If table is missing, this will fail
                             e.printStackTrace();
                             return ResponseEntity.internalServerError().build();
                         }
